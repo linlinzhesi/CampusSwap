@@ -93,6 +93,10 @@ class Product(Base):
     # status：商品状态，1=在售，0=下架。默认 1（发布即上架）
     status = Column(Integer, default=1)
 
+    # stock：库存数量。默认 1（二手闲置通常只有 1 件）
+    # 这是 S3 防超卖的核心字段：下单时会对它做「条件扣减」
+    stock = Column(Integer, default=1, nullable=False)
+
     # created_at：发布时间
     created_at = Column(DateTime, default=datetime.now)
 
@@ -114,3 +118,51 @@ class Product(Base):
 
     def __repr__(self):
         return f"<Product id={self.id} title={self.title} price={self.price}>"
+
+
+# ------------------------------------------------------------------
+# Order 模型：订单表（对应 orders 表）
+# S3 新增。用户下单购买商品时，生成一条订单记录
+# ------------------------------------------------------------------
+class Order(Base):
+    __tablename__ = "orders"
+
+    # id：主键，自增
+    id = Column(Integer, primary_key=True, index=True)
+
+    # order_no：订单号（业务上的唯一编号，形如 "20261015123045xxxxxx"）
+    # unique=True 是关键！这是「幂等性」的保障：
+    #   前端每次下单都生成一个唯一 order_no，
+    #   如果同一 order_no 重复提交，数据库会因为唯一约束拒绝第二次，
+    #   从而防止「重复下单」。这是防重复的核心机制。
+    order_no = Column(String(64), unique=True, nullable=False, index=True)
+
+    # product_id：买了哪个商品（外键）
+    product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
+
+    # buyer_id：买家（外键，指向 users.id）
+    buyer_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+
+    # seller_id：卖家（冗余存一份，方便卖家查自己的订单）
+    seller_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+
+    # quantity：购买数量（二手通常 1 件，但设计上支持多件）
+    quantity = Column(Integer, default=1, nullable=False)
+
+    # total_price：订单总金额 = 单价 × 数量
+    total_price = Column(Numeric(10, 2), nullable=False)
+
+    # status：订单状态
+    #   0=已取消，1=待处理（下单成功），2=已完成
+    #   二手交易没有在线支付，所以状态相对简单
+    status = Column(Integer, default=1, nullable=False)
+
+    # created_at：下单时间
+    created_at = Column(DateTime, default=datetime.now)
+
+    # 关系：方便拿到商品、买家、卖家对象
+    product = relationship("Product", foreign_keys=[product_id])
+    buyer = relationship("User", foreign_keys=[buyer_id])
+
+    def __repr__(self):
+        return f"<Order id={self.id} order_no={self.order_no}>"

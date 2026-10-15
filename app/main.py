@@ -7,12 +7,16 @@
 from datetime import datetime                    # 处理时间
 
 from fastapi import FastAPI, Depends, HTTPException, status   # FastAPI 核心
+from fastapi.middleware.cors import CORSMiddleware           # CORS 跨域中间件
+from fastapi.staticfiles import StaticFiles                  # 静态文件服务（托管前端页面）
+from fastapi.responses import FileResponse                   # 返回文件（用于返回首页 HTML）
+import os                                                   # 操作系统路径处理
 from sqlalchemy.orm import Session              # 数据库会话类型
 
 from . import models, schemas, security         # 导入我们的模型、数据结构、安全工具
 from .database import engine, get_db, Base      # 导入数据库引擎、会话、基类
 from .deps import get_token                     # 导入「从请求头取 token」的依赖
-from .routers import products, categories       # 导入商品、分类路由
+from .routers import products, categories, orders   # 导入商品、分类、订单路由
 
 
 # ------------------------------------------------------------------
@@ -20,6 +24,28 @@ from .routers import products, categories       # 导入商品、分类路由
 # title：应用名，会显示在接口文档页面上
 # ------------------------------------------------------------------
 app = FastAPI(title="校园二手交易平台")
+
+
+# ------------------------------------------------------------------
+# CORS 跨域支持（重要！）
+# 什么是 CORS？浏览器出于安全，默认禁止网页调用「不同源」的接口。
+# 我们加这个中间件，就是「告诉浏览器：允许哪些来源的网页调我的接口」。
+# 这里开发阶段先允许所有来源（allow_origins=["*"]），生产环境要收紧。
+# ------------------------------------------------------------------
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],           # 允许所有来源（开发用；生产要改成具体域名）
+    allow_credentials=True,
+    allow_methods=["*"],           # 允许所有 HTTP 方法（GET/POST/PUT/DELETE...）
+    allow_headers=["*"],           # 允许所有请求头
+)
+
+
+# ------------------------------------------------------------------
+# 前端页面目录路径
+# 前端文件放在项目根目录下的 static/ 文件夹里
+# ------------------------------------------------------------------
+STATIC_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "static")
 
 
 # ------------------------------------------------------------------
@@ -77,6 +103,11 @@ def _create_database_if_not_exists():
 # ------------------------------------------------------------------
 @app.get("/")
 def root():
+    """返回前端首页（真正的网页界面）"""
+    # 如果 static/index.html 存在，就返回它；否则返回 JSON 提示
+    index_path = os.path.join(STATIC_DIR, "index.html")
+    if os.path.exists(index_path):
+        return FileResponse(index_path)
     return {
         "status": "ok",
         "message": "校园二手交易平台 API 运行中",
@@ -168,5 +199,15 @@ def get_me(token: str = Depends(get_token), db: Session = Depends(get_db)):
 # ------------------------------------------------------------------
 app.include_router(products.router)
 app.include_router(categories.router)
+app.include_router(orders.router)
+
+
+# ------------------------------------------------------------------
+# 托管前端静态文件（CSS、JS 等）
+# 注意：这行必须放在「所有路由之后」，否则会拦截 API 请求
+# 作用：把 static 目录下的文件暴露出去，浏览器可以访问 /static/xxx
+# ------------------------------------------------------------------
+if os.path.exists(STATIC_DIR):
+    app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 

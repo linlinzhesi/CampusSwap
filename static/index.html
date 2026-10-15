@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>校园二手交易平台</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <!-- 顶部导航栏 -->
+    <header class="topbar">
+        <div class="container topbar-inner">
+            <h1 class="logo">🎓 校园二手交易平台</h1>
+            <div class="user-area">
+                <!-- 未登录时显示 -->
+                <div id="login-area" class="login-area">
+                    <input id="login-username" type="text" placeholder="用户名" />
+                    <input id="login-password" type="password" placeholder="密码" />
+                    <button id="btn-login" class="btn btn-primary">登录</button>
+                    <button id="btn-show-register" class="btn btn-ghost">注册</button>
+                </div>
+                <!-- 已登录时显示 -->
+                <div id="user-area" class="user-area" style="display:none;">
+                    <span class="welcome">你好，<b id="current-username"></b></span>
+                    <button id="btn-logout" class="btn btn-ghost">退出</button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- 主体 -->
+    <div class="container main">
+        <!-- 左侧：搜索 + 商品列表 -->
+        <div class="content">
+            <!-- 搜索栏 -->
+            <div class="search-bar">
+                <input id="search-keyword" type="text" placeholder="搜索商品，如「教材」「鼠标」" />
+                <select id="search-category">
+                    <option value="">全部分类</option>
+                </select>
+                <button id="btn-search" class="btn btn-primary">搜索</button>
+                <button id="btn-refresh" class="btn btn-ghost">刷新</button>
+            </div>
+
+            <!-- 商品列表 -->
+            <div id="product-list" class="product-list">
+                <p class="empty-tip">加载中…</p>
+            </div>
+
+            <!-- 分页 -->
+            <div id="pagination" class="pagination"></div>
+        </div>
+
+        <!-- 右侧：发布商品 + 我的商品 -->
+        <div class="sidebar">
+            <!-- 发布商品表单 -->
+            <div class="panel">
+                <h3>📦 发布商品</h3>
+                <div id="publish-tip" class="tip">请先登录后再发布</div>
+                <div id="publish-form" style="display:none;">
+                    <input id="p-title" type="text" placeholder="商品标题（必填）" />
+                    <input id="p-price" type="number" step="0.01" min="0.01" placeholder="价格（元）" />
+                    <select id="p-category"></select>
+                    <textarea id="p-desc" rows="3" placeholder="商品描述（选填）"></textarea>
+                    <button id="btn-publish" class="btn btn-primary btn-block">发布</button>
+                </div>
+            </div>
+
+            <!-- 我的商品 -->
+            <div class="panel">
+                <h3>📋 我的商品</h3>
+                <div id="my-products" class="my-products">
+                    <p class="empty-tip">登录后可管理自己发布的商品</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 注册弹窗 -->
+    <div id="register-modal" class="modal" style="display:none;">
+        <div class="modal-box">
+            <h3>注册新账号</h3>
+            <input id="r-username" type="text" placeholder="用户名（至少3个字符）" />
+            <input id="r-password" type="password" placeholder="密码（至少6个字符）" />
+            <div class="modal-actions">
+                <button id="btn-cancel-register" class="btn btn-ghost">取消</button>
+                <button id="btn-do-register" class="btn btn-primary">注册</button>
+            </div>
+            <p id="register-msg" class="msg"></p>
+        </div>
+    </div>
+
+    <!-- 商品详情弹窗 -->
+    <div id="detail-modal" class="modal" style="display:none;">
+        <div class="modal-box">
+            <h3 id="d-title"></h3>
+            <div class="detail-body">
+                <div class="detail-price" id="d-price"></div>
+                <div class="detail-meta" id="d-meta"></div>
+                <div class="detail-desc" id="d-desc"></div>
+            </div>
+            <div class="modal-actions">
+                <button id="btn-close-detail" class="btn btn-ghost">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>

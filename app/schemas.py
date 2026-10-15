@@ -70,6 +70,7 @@ class ProductCreate(BaseModel):
     price: Decimal = Field(..., gt=0)                        # 价格，必须 > 0
     category_id: Optional[int] = None                        # 分类 id，可空
     image_url: Optional[str] = None                          # 图片链接，可空
+    stock: int = Field(1, ge=1)                              # 库存，默认 1，至少 1
 
 
 # ------------------------------------------------------------------
@@ -83,6 +84,7 @@ class ProductUpdate(BaseModel):
     category_id: Optional[int] = None
     image_url: Optional[str] = None
     status: Optional[int] = None    # 1=在售，0=下架
+    stock: Optional[int] = Field(None, ge=0)   # 库存，允许设为 0（售罄）
 
 
 # ------------------------------------------------------------------
@@ -98,6 +100,7 @@ class ProductOut(BaseModel):
     seller_id: int
     view_count: int
     status: int
+    stock: int
     created_at: datetime
     # 卖家用户名（从 relationship 拿的，方便前端直接显示「卖家：张三」）
     seller_name: Optional[str] = None
@@ -116,3 +119,38 @@ class ProductListOut(BaseModel):
     items: List[ProductOut]
     page: int
     size: int
+
+
+# ============================================================
+# 以下是订单模块相关的 schemas（S3）
+# ============================================================
+
+# ------------------------------------------------------------------
+# 下单请求体
+# order_no：订单号（幂等键），由前端生成并保证唯一
+#           例如用「时间戳 + 随机数」生成
+# ------------------------------------------------------------------
+class OrderCreate(BaseModel):
+    product_id: int
+    quantity: int = Field(1, ge=1)        # 购买数量，至少 1
+    order_no: str = Field(..., min_length=1, max_length=64)  # 幂等键，必填
+
+
+# ------------------------------------------------------------------
+# 订单响应体
+# ------------------------------------------------------------------
+class OrderOut(BaseModel):
+    id: int
+    order_no: str
+    product_id: int
+    buyer_id: int
+    seller_id: int
+    quantity: int
+    total_price: Decimal
+    status: int
+    created_at: datetime
+    # 附带的展示信息（方便前端直接显示）
+    product_title: Optional[str] = None
+
+    class Config:
+        from_attributes = True
