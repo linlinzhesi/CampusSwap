@@ -1,0 +1,36 @@
+# ============================================================
+# 校园二手交易平台 - 依赖清单
+# 安装方式：pip install -r requirements.txt
+# 每个依赖的作用见下方注释
+# ============================================================
+
+# FastAPI：现代 Python Web 框架，用来写后端接口
+# 它的最大优点是「自带交互式接口文档」(/docs)，写完就能在浏览器里点着测
+fastapi==0.115.5
+
+# uvicorn：ASGI 服务器，用来「启动」FastAPI 应用
+# 相当于把我们的代码跑起来、监听端口的那个程序
+uvicorn==0.32.1
+
+# SQLAlchemy：ORM 框架（对象关系映射）
+# 作用：让我们用「Python 类」来操作数据库，而不用手写 SQL 字符串
+# 比如 db.query(User) 就相当于 SELECT * FROM users
+sqlalchemy==2.0.36
+
+# PyMySQL：MySQL 的 Python 驱动
+# SQLAlchemy 要连 MySQL，底层就靠这个驱动来真正和 MySQL 通信
+pymysql==1.1.1
+
+# passlib：密码哈希库
+# 作用：把用户密码「哈希」后再存进数据库（绝不存明文密码）
+# 这样即使数据库泄露，别人也看不到原始密码
+passlib==1.7.4
+
+# bcrypt：passlib 的底层加密算法实现
+# 必须和 passlib 一起装，才能用 bcrypt 哈希算法
+bcrypt==4.2.0
+
+# PyJWT：生成和校验 JWT（登录令牌）
+# 用户登录成功后，我们发一个 token 给他；之后他每次请求都带着 token，
+# 我们用 PyJWT 来校验这个 token 是否合法、有没有过期
+PyJWT==2.9.0
