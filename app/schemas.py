@@ -10,7 +10,9 @@
 # ============================================================
 
 from datetime import datetime
+from typing import Optional, List
 from pydantic import BaseModel, Field     # BaseModel 是 Pydantic 的基类
+from decimal import Decimal               # 精确小数（钱的正确类型）
 
 
 # ------------------------------------------------------------------
@@ -53,3 +55,64 @@ class Token(BaseModel):
     access_token: str       # JWT 令牌字符串
     token_type: str = "bearer"   # 令牌类型（固定写法，业界惯例）
     user: UserOut           # 顺便返回用户信息，前端省一次请求
+
+
+# ============================================================
+# 以下是商品模块相关的 schemas
+# ============================================================
+
+# ------------------------------------------------------------------
+# 发布/创建商品的请求体
+# ------------------------------------------------------------------
+class ProductCreate(BaseModel):
+    title: str = Field(..., min_length=1, max_length=100)   # 标题，必填
+    description: Optional[str] = None                        # 描述，可空
+    price: Decimal = Field(..., gt=0)                        # 价格，必须 > 0
+    category_id: Optional[int] = None                        # 分类 id，可空
+    image_url: Optional[str] = None                          # 图片链接，可空
+
+
+# ------------------------------------------------------------------
+# 更新商品的请求体（所有字段都可选，只更新传了的字段）
+# Optional = 可以不传这个字段
+# ------------------------------------------------------------------
+class ProductUpdate(BaseModel):
+    title: Optional[str] = Field(None, min_length=1, max_length=100)
+    description: Optional[str] = None
+    price: Optional[Decimal] = Field(None, gt=0)
+    category_id: Optional[int] = None
+    image_url: Optional[str] = None
+    status: Optional[int] = None    # 1=在售，0=下架
+
+
+# ------------------------------------------------------------------
+# 商品响应体：返回给前端时，附带卖家用户名
+# ------------------------------------------------------------------
+class ProductOut(BaseModel):
+    id: int
+    title: str
+    description: Optional[str]
+    price: Decimal
+    category_id: Optional[int]
+    image_url: Optional[str]
+    seller_id: int
+    view_count: int
+    status: int
+    created_at: datetime
+    # 卖家用户名（从 relationship 拿的，方便前端直接显示「卖家：张三」）
+    seller_name: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+# ------------------------------------------------------------------
+# 商品列表响应体：分页结果
+# total = 符合条件的总条数，items = 当前页的商品列表
+# 前端靠 total 算「一共有几页」，靠 items 渲染当前页
+# ------------------------------------------------------------------
+class ProductListOut(BaseModel):
+    total: int
+    items: List[ProductOut]
+    page: int
+    size: int

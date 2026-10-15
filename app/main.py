@@ -6,11 +6,13 @@
 
 from datetime import datetime                    # 处理时间
 
-from fastapi import FastAPI, Depends, HTTPException, status, Header   # FastAPI 核心
+from fastapi import FastAPI, Depends, HTTPException, status   # FastAPI 核心
 from sqlalchemy.orm import Session              # 数据库会话类型
 
 from . import models, schemas, security         # 导入我们的模型、数据结构、安全工具
 from .database import engine, get_db, Base      # 导入数据库引擎、会话、基类
+from .deps import get_token                     # 导入「从请求头取 token」的依赖
+from .routers import products, categories       # 导入商品、分类路由
 
 
 # ------------------------------------------------------------------
@@ -31,17 +33,25 @@ def startup():
     # 先确保数据库存在，再建表
     _create_database_if_not_exists()
     Base.metadata.create_all(bind=engine)
+    # 初始化默认分类（如果分类表是空的，就写入几个常用分类）
+    _init_default_categories()
 
 
-def _get_token_from_header(authorization: str = Header(None)) -> str:
-    """从请求头提取 Bearer token"""
-    if not authorization:
-        raise HTTPException(status_code=401, detail="缺少登录凭证")
-    # 格式是 "Bearer xxx"，拆开取后半部分
-    parts = authorization.split(" ")
-    if len(parts) != 2 or parts[0].lower() != "bearer":
-        raise HTTPException(status_code=401, detail="登录凭证格式错误")
-    return parts[1]
+def _init_default_categories():
+    """第一次启动时，写入几个默认商品分类"""
+    from .database import SessionLocal
+    db = SessionLocal()
+    try:
+        # 如果 categories 表已经有数据了，就跳过（避免重复插入）
+        if db.query(models.Category).count() > 0:
+            return
+        # 默认分类列表
+        default_names = ["图书教材", "数码电子", "生活用品", "运动户外", "服饰鞋包", "其他"]
+        for name in default_names:
+            db.add(models.Category(name=name))
+        db.commit()
+    finally:
+        db.close()
 
 
 def _create_database_if_not_exists():
@@ -135,7 +145,7 @@ def login(user: schemas.UserLogin, db: Session = Depends(get_db)):
 # 这是一个「受保护」的接口示例：只有登录了才能访问
 # ------------------------------------------------------------------
 @app.get("/api/users/me", response_model=schemas.UserOut)
-def get_me(token: str = Depends(_get_token_from_header), db: Session = Depends(get_db)):
+def get_me(token: str = Depends(get_token), db: Session = Depends(get_db)):
     """返回当前登录用户的信息"""
     # 1. 解析 token，拿到 user_id；不合法会抛异常
     try:
@@ -150,5 +160,13 @@ def get_me(token: str = Depends(_get_token_from_header), db: Session = Depends(g
 
     # 3. 返回用户信息
     return db_user
+
+
+# ------------------------------------------------------------------
+# 挂载商品、分类路由
+# 把 routers 里定义的接口「注册」到主应用上
+# ------------------------------------------------------------------
+app.include_router(products.router)
+app.include_router(categories.router)
 
 
